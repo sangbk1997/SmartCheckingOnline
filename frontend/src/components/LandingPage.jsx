@@ -1,14 +1,21 @@
 import React from 'react';
 import { 
   ShieldCheck, QrCode, Smartphone, Wifi, Sparkles, ArrowRight, 
-  CalendarClock, Lock, CheckCircle, FileText, AlertTriangle, Play 
+  CalendarClock, Lock, CheckCircle, FileText, AlertTriangle, Play, 
+  LogIn, UserPlus, Users, CheckCircle2 
 } from 'lucide-react';
 
-export default function LandingPage({ onGoToKiosk, onGoToEmployee, onGoToManager }) {
+export default function LandingPage({ 
+  onGoToKiosk, 
+  onGoToEmployee, 
+  onGoToManager, 
+  onOpenAuthModal, 
+  currentUser 
+}) {
   return (
     <div className="space-y-16 py-8">
       {/* Hero Section */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-900 via-indigo-800 to-slate-900 text-white p-8 sm:p-14 shadow-2xl">
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-950 via-indigo-900 to-slate-900 text-white p-8 sm:p-14 shadow-2xl">
         <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
         <div className="absolute bottom-0 left-0 w-80 h-80 bg-violet-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
@@ -31,26 +38,62 @@ export default function LandingPage({ onGoToKiosk, onGoToEmployee, onGoToManager
             kiểm soát <strong>IP mạng văn phòng</strong> và phương án <strong>Selfie khẩn cấp</strong> khi mất điện.
           </p>
 
-          <div className="flex flex-wrap gap-3.5 pt-2">
+          {/* Action CTAs */}
+          <div className="flex flex-wrap items-center gap-3.5 pt-2">
+            {!currentUser ? (
+              <>
+                <button
+                  onClick={() => onOpenAuthModal('login')}
+                  className="px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 text-white font-bold text-sm shadow-lg shadow-indigo-500/30 transition-all flex items-center gap-2 group"
+                >
+                  <LogIn className="w-4 h-4" />
+                  Đăng Nhập Vào Hệ Thống
+                </button>
+                <button
+                  onClick={() => onOpenAuthModal('register')}
+                  className="px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-lg shadow-emerald-600/30 transition-all flex items-center gap-2"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  Đăng Ký Thành Viên Mới
+                </button>
+              </>
+            ) : (
+              <div className="p-3 rounded-2xl bg-white/10 border border-white/15 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-emerald-500 text-white flex items-center justify-center font-bold text-sm">
+                  ✓
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                    Đã đăng nhập: <span className="text-amber-300">{currentUser.fullName}</span>
+                    <span className="px-1.5 py-0.2 rounded text-[10px] font-extrabold bg-emerald-400 text-slate-900">
+                      {currentUser.role}
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-indigo-200">{currentUser.email}</div>
+                </div>
+              </div>
+            )}
+
             <button
               onClick={onGoToKiosk}
-              className="px-6 py-3 rounded-xl bg-white text-indigo-900 font-bold text-sm shadow-lg hover:bg-indigo-50 transition-all flex items-center gap-2 group"
+              className="px-5 py-3 rounded-xl bg-white text-indigo-900 font-bold text-sm shadow-md hover:bg-indigo-50 transition-all flex items-center gap-2 group"
             >
               <Play className="w-4 h-4 fill-indigo-900 group-hover:scale-110 transition-transform" />
-              Mở Màn hình Kiosk TV (QR 5s)
+              Màn hình Kiosk TV (QR 5s)
             </button>
             <button
               onClick={onGoToEmployee}
-              className="px-6 py-3 rounded-xl bg-indigo-600/80 hover:bg-indigo-600 text-white font-semibold text-sm border border-indigo-400/30 transition-all flex items-center gap-2"
+              className="px-5 py-3 rounded-xl bg-indigo-800/80 hover:bg-indigo-700 text-white font-semibold text-sm border border-indigo-400/30 transition-all flex items-center gap-2"
             >
-              Vào Không gian Nhân viên
+              Cổng Nhân viên
               <ArrowRight className="w-4 h-4" />
             </button>
             <button
               onClick={onGoToManager}
-              className="px-6 py-3 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-indigo-200 font-semibold text-sm border border-slate-700 transition-all"
+              className="px-5 py-3 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-indigo-200 font-semibold text-sm border border-slate-700 transition-all flex items-center gap-2"
             >
-              Duyệt đơn & Theo dõi (HR)
+              <Users className="w-4 h-4" />
+              Cổng Quản lý / HR
             </button>
           </div>
         </div>
@@ -104,70 +147,20 @@ export default function LandingPage({ onGoToKiosk, onGoToEmployee, onGoToManager
             <div className="w-12 h-12 rounded-xl bg-violet-100 text-violet-700 flex items-center justify-center">
               <Smartphone className="w-6 h-6" />
             </div>
-            <h3 className="font-bold text-slate-900 text-base">Device Binding (Khóa Thiết Bị)</h3>
+            <h3 className="font-bold text-slate-900 text-base">Hardware Binding (1-1)</h3>
             <p className="text-xs text-slate-600 leading-relaxed">
-              Mỗi nhân viên chỉ được chấm công trên 1 thiết bị đã được kích hoạt. Ngăn chặn hành vi 1 người mang điện thoại đến chấm công cho cả nhóm.
+              Khóa cứng tài khoản nhân viên vào phần cứng thiết bị di động duy nhất qua Device Fingerprint. Chặn đứng tuyệt đối việc 1 nhân viên cầm nhiều điện thoại chấm công cho cả phòng.
             </p>
           </div>
 
           {/* Card 3 */}
           <div className="glass-card rounded-2xl p-6 space-y-3.5 hover:shadow-lg transition-shadow">
-            <div className="w-12 h-12 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center">
-              <AlertTriangle className="w-6 h-6" />
+            <div className="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+              <Wifi className="w-6 h-6" />
             </div>
-            <h3 className="font-bold text-slate-900 text-base">Dự phòng Khẩn cấp (Selfie + GPS)</h3>
+            <h3 className="font-bold text-slate-900 text-base">Văn Phòng & Chấm Khẩn Cấp</h3>
             <p className="text-xs text-slate-600 leading-relaxed">
-              Khi mất điện hoặc đứt cáp mạng, nhân viên chấm công bằng ảnh Selfie chụp trực tiếp kèm toạ độ GPS. Tự động tính khoảng cách Haversine cảnh báo nếu lệch &gt; 200m.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Feature Highlights Grid */}
-      <div className="glass-card rounded-3xl p-8 space-y-6">
-        <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-          <CalendarClock className="w-5 h-5 text-indigo-600" />
-          Phân hệ Quản lý Đơn từ & Tự động Tính công Chặt chẽ
-        </h3>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1.5">
-            <div className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
-              <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
-              Kiểm soát Hạn ngạch (Quota)
-            </div>
-            <p className="text-[11px] text-slate-600">
-              Đi muộn/về sớm tối đa 2 lần/tháng (mỗi lần $\le$ 60 phút). Tự động chặn ngay từ giao diện nộp đơn.
-            </p>
-          </div>
-
-          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1.5">
-            <div className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
-              <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
-              Hạn nộp Đơn Quên Chấm
-            </div>
-            <p className="text-[11px] text-slate-600">
-              Bắt buộc nộp trong vòng 3 ngày làm việc kể từ ngày quên chấm. Sau 3 ngày hệ thống tự động khóa.
-            </p>
-          </div>
-
-          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1.5">
-            <div className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
-              <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
-              Chứng từ Y tế BHXH (C65)
-            </div>
-            <p className="text-[11px] text-slate-600">
-              Nghỉ ốm đau, thai sản bắt buộc tải lên giấy chứng nhận y tế để tách bạch nguồn chi trả BHXH.
-            </p>
-          </div>
-
-          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1.5">
-            <div className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
-              <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
-              Khóa Công & Hồi tố Kỳ sau
-            </div>
-            <p className="text-[11px] text-slate-600">
-              Kỳ công chốt khóa bất biến. Đơn duyệt muộn sau khi khóa sẽ tự động chuyển hồi tố bù vào kỳ sau.
+              Kiểm soát IP Subnet văn phòng (192.168.1.0/24). Khi xảy ra sự cố mất điện hoặc mất mạng nội bộ, cơ chế Chấm công Khẩn cấp 4G kèm ảnh Selfie và GPS Haversine sẽ tự động kích hoạt.
             </p>
           </div>
         </div>
@@ -175,4 +168,3 @@ export default function LandingPage({ onGoToKiosk, onGoToEmployee, onGoToManager
     </div>
   );
 }
-
