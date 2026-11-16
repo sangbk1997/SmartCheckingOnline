@@ -1,0 +1,6 @@
+robotframework>=7.0.0
+robotframework-requests>=0.7.0
+robotframework-browser>=18.0.0
+requests>=2.25.0
+playwright>=1.40.0
+

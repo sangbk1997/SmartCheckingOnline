@@ -1,0 +1,1384 @@
+{
+  "info": {
+    "name": "SmartTimeChecking Comprehensive Test Suite (Success & Edge Cases)",
+    "description": "Bộ kịch bản kiểm thử toàn diện từ kịch bản chuẩn đến kịch bản lỗi, biên, bảo mật, thông điệp người dùng & hướng dẫn HR xử lý sự cố.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8085",
+      "type": "string"
+    },
+    {
+      "key": "devToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "leadToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "hrToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "activeQrPayload",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "pendingEmergencyId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "createdRequestId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "01. Authentication & RBAC",
+      "item": [
+        {
+          "name": "1.1 Login Dev (Lê Hoàng Nam - Developer)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.expect(jsonData.success).to.be.true;",
+                  "pm.collectionVariables.set('devToken', jsonData.data.token);",
+                  "pm.test('Dev Token generated', function () { pm.response.to.have.status(200); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"dev@congty.com\"}"
+            },
+            "url": "{{baseUrl}}/api/v1/auth/login-dev"
+          }
+        },
+        {
+          "name": "1.2 Login Manager (Trần Văn Mạnh - Tech Lead)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.expect(jsonData.success).to.be.true;",
+                  "pm.collectionVariables.set('leadToken', jsonData.data.token);",
+                  "pm.test('Lead Token generated', function () { pm.response.to.have.status(200); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"lead@congty.com\"}"
+            },
+            "url": "{{baseUrl}}/api/v1/auth/login-dev"
+          }
+        },
+        {
+          "name": "1.3 Login HR (Nguyễn Thị Thu - HR Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.expect(jsonData.success).to.be.true;",
+                  "pm.collectionVariables.set('hrToken', jsonData.data.token);",
+                  "pm.test('HR Token generated', function () { pm.response.to.have.status(200); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"hr@congty.com\"}"
+            },
+            "url": "{{baseUrl}}/api/v1/auth/login-dev"
+          }
+        },
+        {
+          "name": "1.4 Get Profile (/auth/me)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{devToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/auth/me"
+          }
+        },
+        {
+          "name": "1.4 Kiểm tra thiết bị của tôi (Device Binding)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{dev_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/devices/my-device",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "devices",
+                "my-device"
+              ]
+            }
+          }
+        },
+        {
+          "name": "1.5 HR Admin lấy toàn bộ danh sách thiết bị liên kết",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{hr_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/devices/admin/all",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "devices",
+                "admin",
+                "all"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "02. Kiosk Dynamic QR & Multi-Factor Punch (Biên & Lỗi)",
+      "item": [
+        {
+          "name": "2.1 Lấy mã Kiosk QR mới nhất",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.expect(jsonData.success).to.be.true;",
+                  "pm.collectionVariables.set('activeQrPayload', jsonData.data.qrPayload);",
+                  "pm.test('Got active QR', function () { pm.response.to.have.status(200); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/kiosk/current-qr"
+          }
+        },
+        {
+          "name": "2.2 [SUCCESS] Chấm công Vào ca chuẩn (Đúng IP, Đúng Thiết bị, QR hợp lệ)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Punch IN status 200', function () { pm.response.to.have.status(200); });",
+                  "var jsonData = pm.response.json();",
+                  "pm.expect(jsonData.data.status).to.eql('VALID');",
+                  "pm.expect(jsonData.data.punchType).to.eql('IN');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{devToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qrPayload\": \"{{activeQrPayload}}\",\n  \"deviceToken\": \"FP_DEVICE_TOKEN_DEV_IPHONE_15_PRO\",\n  \"punchType\": \"IN\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/attendance/punch"
+          }
+        },
+        {
+          "name": "2.3 [FAILED - BIÊN] Quét lại mã QR vừa dùng (Replay Attack)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Expected 400 ERR_QR_EXPIRED', function () { pm.response.to.have.status(400); });",
+                  "var jsonData = pm.response.json();",
+                  "pm.expect(jsonData.code).to.eql('ERR_QR_EXPIRED');",
+                  "pm.expect(jsonData.hrGuide).to.include('Mã Dynamic QR tự động xoay 5 giây/lần');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{devToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qrPayload\": \"{{activeQrPayload}}\",\n  \"deviceToken\": \"FP_DEVICE_TOKEN_DEV_IPHONE_15_PRO\",\n  \"punchType\": \"IN\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/attendance/punch"
+          }
+        },
+        {
+          "name": "2.4 [FAILED - BẢO MẬT] Sửa chữ ký HMAC mã QR (Tampered QR Attack)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Expected 400 ERR_INVALID_QR', function () { pm.response.to.have.status(400); });",
+                  "var jsonData = pm.response.json();",
+                  "pm.expect(jsonData.code).to.eql('ERR_INVALID_QR');",
+                  "pm.expect(jsonData.hrGuide).to.include('Kiểm tra camera quét có bị mờ hoặc có can thiệp payload');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{devToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qrPayload\": \"OFFICE_HQ_FLOOR_1|1731514800|hacker-nonce|fake-signature\",\n  \"deviceToken\": \"FP_DEVICE_TOKEN_DEV_IPHONE_15_PRO\",\n  \"punchType\": \"IN\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/attendance/punch"
+          }
+        },
+        {
+          "name": "2.5 [FAILED - GIAN LẬN] Chấm công bằng thiết bị chưa đăng ký (Device Mismatch)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Expected 400 ERR_DEVICE_MISMATCH', function () { pm.response.to.have.status(400); });",
+                  "var jsonData = pm.response.json();",
+                  "pm.expect(jsonData.code).to.eql('ERR_DEVICE_MISMATCH');",
+                  "pm.expect(jsonData.hrGuide).to.include('HR/IT kiểm tra xem nhân viên có đổi điện thoại mới không');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{devToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qrPayload\": \"OFFICE_HQ_FLOOR_1|1731514800|nonce|sig\",\n  \"deviceToken\": \"UNKNOWN_COLLEAGUE_PHONE\",\n  \"punchType\": \"IN\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/attendance/punch"
+          }
+        },
+        {
+          "name": "2.6 Lịch sử chấm công theo khoảng thời gian",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{dev_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/attendance/history?startDate=2026-10-01&endDate=2026-11-14",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "attendance",
+                "history"
+              ],
+              "query": [
+                {
+                  "key": "startDate",
+                  "value": "2026-10-01"
+                },
+                {
+                  "key": "endDate",
+                  "value": "2026-11-14"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "03. Emergency Fallback & GPS Fraud Detection",
+      "item": [
+        {
+          "name": "3.1 [SUCCESS / WARNING] Chấm công Khẩn cấp Selfie có toạ độ xa VP (> 200m)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.expect(jsonData.success).to.be.true;",
+                  "pm.expect(jsonData.data.status).to.eql('PENDING_APPROVAL');",
+                  "pm.expect(jsonData.data.rejectionReason).to.include('FLAG_LOCATION_MISMATCH');",
+                  "pm.collectionVariables.set('pendingEmergencyId', jsonData.data.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{devToken}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "latitude",
+                  "value": "21.028511",
+                  "type": "text"
+                },
+                {
+                  "key": "longitude",
+                  "value": "105.854444",
+                  "type": "text"
+                },
+                {
+                  "key": "reason",
+                  "value": "Công ty mất điện, không mở được màn hình Kiosk QR",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/api/v1/attendance/punch-emergency"
+          }
+        },
+        {
+          "name": "3.2 Quản lý xem danh sách chấm công khẩn cấp",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{leadToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/admin/attendance/emergency-pending"
+          }
+        },
+        {
+          "name": "3.3 Quản lý Phê duyệt ca Chấm công khẩn cấp",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.expect(jsonData.data.status).to.eql('VALID');",
+                  "pm.test('Emergency punch approved', function () { pm.response.to.have.status(200); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{leadToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"APPROVE\",\n  \"comment\": \"Đã xác nhận sự cố mất điện tòa nhà lúc 8h15\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/admin/attendance/emergency/{{pendingEmergencyId}}/review"
+          }
+        }
+      ]
+    },
+    {
+      "name": "04. Request Engine & Quota Edge Cases",
+      "item": [
+        {
+          "name": "4.1 Xem Hạn ngạch (Quota) còn lại trong tháng",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{devToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/requests/quotas/remaining"
+          }
+        },
+        {
+          "name": "4.2 [FAILED - BIÊN] Tạo đơn Đi muộn > 60 phút (Chặn thời lượng tối đa)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Expected 400 ERR_QUOTA_EXCEEDED', function () { pm.response.to.have.status(400); });",
+                  "var jsonData = pm.response.json();",
+                  "pm.expect(jsonData.code).to.eql('ERR_QUOTA_EXCEEDED');",
+                  "pm.expect(jsonData.message).to.include('Thời lượng đi muộn/về sớm tối đa là 60 phút/lần');",
+                  "pm.expect(jsonData.hrGuide).to.include('Quy chế công ty giới hạn: Đi muộn tối đa 2 lần/tháng');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{devToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"requestType\": \"LATE_IN\",\n  \"fromDate\": \"2026-11-14\",\n  \"toDate\": \"2026-11-14\",\n  \"durationMinutes\": 75,\n  \"reason\": \"Kẹt xe quá nặng\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/requests"
+          }
+        },
+        {
+          "name": "4.3 [FAILED - BIÊN] Tạo đơn Nghỉ ốm thiếu Chứng từ y tế C65",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Expected 400 ERR_ATTACHMENT_REQUIRED', function () { pm.response.to.have.status(400); });",
+                  "var jsonData = pm.response.json();",
+                  "pm.expect(jsonData.code).to.eql('ERR_ATTACHMENT_REQUIRED');",
+                  "pm.expect(jsonData.hrGuide).to.include('Để phục vụ thanh quyết toán bảo hiểm, đơn nghỉ ốm/thai sản bắt buộc phải có Giấy khám');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{devToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"requestType\": \"SICK_LEAVE\",\n  \"fromDate\": \"2026-11-15\",\n  \"toDate\": \"2026-11-15\",\n  \"reason\": \"Ốm sốt\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/requests"
+          }
+        },
+        {
+          "name": "4.4 [FAILED - BIÊN] Tạo đơn Bổ sung công quá 3 ngày làm việc (Deadline)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Expected 400 ERR_DEADLINE_EXCEEDED', function () { pm.response.to.have.status(400); });",
+                  "var jsonData = pm.response.json();",
+                  "pm.expect(jsonData.code).to.eql('ERR_DEADLINE_EXCEEDED');",
+                  "pm.expect(jsonData.hrGuide).to.include('Quy chế quy định đơn bổ sung công phải nộp trong 3 ngày');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{devToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"requestType\": \"MISSED_PUNCH\",\n  \"fromDate\": \"2026-11-01\",\n  \"toDate\": \"2026-11-01\",\n  \"reason\": \"Quên chấm công cách đây 2 tuần\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/requests"
+          }
+        },
+        {
+          "name": "4.5 [SUCCESS] Tạo đơn WFH hợp lệ (Báo trước 1 ngày)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.expect(jsonData.success).to.be.true;",
+                  "pm.collectionVariables.set('createdRequestId', jsonData.data.id);",
+                  "pm.test('WFH request created', function () { pm.response.to.have.status(200); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{devToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"requestType\": \"WFH\",\n  \"fromDate\": \"2026-11-16\",\n  \"toDate\": \"2026-11-16\",\n  \"reason\": \"Làm việc từ xa theo lịch sprint\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/requests"
+          }
+        },
+        {
+          "name": "4.6 Quản lý Duyệt Đơn WFH",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{leadToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"APPROVE\",\n  \"comment\": \"Đồng ý WFH\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/requests/{{createdRequestId}}/review"
+          }
+        },
+        {
+          "name": "4.7 Quản lý / HR lấy danh sách đơn chờ duyệt kèm chi tiết",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{managerToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/requests/pending"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.expect(jsonData.success).to.be.true;",
+                  "pm.test(\"Pending requests retrieved\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "05. Live Dashboard & Timesheet Closing",
+      "item": [
+        {
+          "name": "5.1 Live Team Dashboard (Theo dõi trạng thái đội nhóm trực tiếp)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.expect(jsonData.success).to.be.true;",
+                  "pm.expect(jsonData.data.totalEmployees).to.be.above(0);",
+                  "pm.test('Got live team dashboard', function () { pm.response.to.have.status(200); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{leadToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/attendance/live-dashboard"
+          }
+        },
+        {
+          "name": "5.2 Nhân viên xem lịch sử chấm công hôm nay",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{devToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/attendance/today"
+          }
+        }
+      ]
+    },
+    {
+      "name": "06. Enterprise Org Tree, Settings & Timesheet CSV",
+      "item": [
+        {
+          "name": "6.1 Danh sách Cây Cơ cấu Tổ chức & Phòng ban",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{hr_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/departments",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "departments"
+              ]
+            }
+          }
+        },
+        {
+          "name": "6.2 Danh bạ Nhân sự Toàn Doanh nghiệp (14 Nhân sự)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{hr_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/employees",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "employees"
+              ]
+            }
+          }
+        },
+        {
+          "name": "6.3 Danh sách Ca làm việc (Shifts)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{hr_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/settings/shifts",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "settings",
+                "shifts"
+              ]
+            }
+          }
+        },
+        {
+          "name": "6.4 Danh sách Quy định Quota (Policy Rules)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{hr_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/settings/policies",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "settings",
+                "policies"
+              ]
+            }
+          }
+        },
+        {
+          "name": "6.5 Danh sách Kỳ công (Payroll Periods)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{hr_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/timesheets/admin/periods",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "timesheets",
+                "admin",
+                "periods"
+              ]
+            }
+          }
+        },
+        {
+          "name": "6.6 Ma trận Bảng công Kỳ Tháng 10/2026",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{hr_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/timesheets/admin/periods/period-2026-10/matrix",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "timesheets",
+                "admin",
+                "periods",
+                "period-2026-10",
+                "matrix"
+              ]
+            }
+          }
+        },
+        {
+          "name": "6.7 Xuất Bảng công CSV Chuẩn Excel (UTF-8 BOM)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{hr_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/timesheets/admin/periods/period-2026-10/export-csv",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "timesheets",
+                "admin",
+                "periods",
+                "period-2026-10",
+                "export-csv"
+              ]
+            }
+          }
+        },
+        {
+          "name": "6.8 Nhân viên Khiếu nại Kỳ đã khóa -> Bị từ chối (ERR_DISPUTE_EXPIRED)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{dev_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/timesheets/disputes?periodId=period-2026-10&disputedDate=2026-10-15&reason=Khiếu nại sót công",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "timesheets",
+                "disputes"
+              ],
+              "query": [
+                {
+                  "key": "periodId",
+                  "value": "period-2026-10"
+                },
+                {
+                  "key": "disputedDate",
+                  "value": "2026-10-15"
+                },
+                {
+                  "key": "reason",
+                  "value": "Khiếu nại sót công"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "6.9 Nhân viên xem bảng công cá nhân theo kỳ",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{dev_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/timesheets/my-timesheet?periodId=period-2026-10",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "timesheets",
+                "my-timesheet"
+              ],
+              "query": [
+                {
+                  "key": "periodId",
+                  "value": "period-2026-10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "6.10 HR Admin xem danh sách khiếu nại công",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{hr_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/timesheets/admin/disputes",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "timesheets",
+                "admin",
+                "disputes"
+              ]
+            }
+          }
+        },
+        {
+          "name": "6.11 HR Admin kích hoạt tổng hợp bảng công kỳ",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{hr_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/timesheets/admin/periods/period-2026-11/aggregate",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "timesheets",
+                "admin",
+                "periods",
+                "period-2026-11",
+                "aggregate"
+              ]
+            }
+          }
+        },
+        {
+          "name": "6.12 Nhân viên xem danh sách khiếu nại công của mình",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{devToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/timesheets/my-disputes"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.expect(jsonData.success).to.be.true;",
+                  "pm.test(\"My disputes retrieved\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "6.13 HR Admin tạo kỳ công mới",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{hrToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"periodCode\": \"KY_12_2026\",\n  \"startDate\": \"2026-12-01\",\n  \"endDate\": \"2026-12-31\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/timesheets/admin/periods"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.expect(jsonData.success).to.be.true;",
+                  "pm.test(\"Payroll period created\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "6.14 HR Admin tạo ngày nghỉ lễ doanh nghiệp",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{hrToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"holidayYear\": 2026,\n  \"holidayName\": \"Ng\\u00e0y Th\\u00e0nh L\\u1eadp T\\u1eadp \\u0110o\\u00e0n SmartCorp\",\n  \"startDate\": \"2026-11-20\",\n  \"endDate\": \"2026-11-20\",\n  \"isPaid\": true\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/admin/settings/holidays"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.expect(jsonData.success).to.be.true;",
+                  "pm.test(\"Holiday created\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "07. Phase 2 - Google Workspace & Actionable Approvals",
+      "item": [
+        {
+          "name": "7.1 Lấy cấu hình thông báo Google Workspace",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{hrToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/admin/notifications/config"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.expect(jsonData.success).to.be.true;",
+                  "pm.test(\"Notification config retrieved\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "7.2 Cập nhật cấu hình Gmail SMTP & Google Chat Webhook",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{hrToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"gmailEnabled\": true,\n  \"gmailHost\": \"smtp.gmail.com\",\n  \"gmailPort\": 587,\n  \"gmailUsername\": \"hr-bot@smartcorp.com\",\n  \"gmailAppPassword\": \"demo-app-password\",\n  \"googleChatEnabled\": true,\n  \"attendanceWebhookUrl\": \"https://chat.googleapis.com/v1/spaces/SPACE_123/messages?key=AIzaTest&token=testToken\",\n  \"securityAlertsWebhookUrl\": \"https://chat.googleapis.com/v1/spaces/SPACE_456/messages?key=AIzaTest&token=testToken\",\n  \"dailyBulletinCron\": \"0 0 9 * * *\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/admin/notifications/config"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.expect(jsonData.success).to.be.true;",
+                  "pm.test(\"Config updated successfully\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "7.3 Gửi Thử Nghiệm Actionable Email Phê Duyệt",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{hrToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"recipientEmail\": \"manager@smartcorp.com\",\n  \"subject\": \"[Test Phase 2] Y\\u00eau c\\u1ea7u ph\\u00ea duy\\u1ec7t WFH\",\n  \"employeeName\": \"L\\u00ea Ho\\u00e0ng Nam (DEV-001)\",\n  \"requestType\": \"L\\u00e0m vi\\u1ec7c t\\u1eeb xa (WFH)\",\n  \"period\": \"H\\u00f4m nay - 14/11/2026\",\n  \"reason\": \"Gia \\u0111\\u00ecnh c\\u00f3 vi\\u1ec7c \\u0111\\u1ed9t xu\\u1ea5t, xin ph\\u00e9p l\\u00e0m vi\\u1ec7c t\\u1ea1i nh\\u00e0\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/admin/notifications/test-email"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.expect(jsonData.success).to.be.true;",
+                  "pm.test(\"Test Actionable Email sent/simulated\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "7.4 Bắn Thử Nghiệm Thẻ Google Chat Card v2",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{hrToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"spaceType\": \"ATTENDANCE\",\n  \"title\": \"\\ud83d\\udd14 Y\\u00caU C\\u1ea6U DUY\\u1ec6T \\u0110\\u01a0N NGH\\u1ec8 PH\\u00c9P (PHE-2026-0099)\",\n  \"subtitle\": \"L\\u00ea Ho\\u00e0ng Nam - Ban C\\u00f4ng Ngh\\u1ec7\",\n  \"fields\": {\n    \"Lo\\u1ea1i \\u0111\\u01a1n\": \"Ngh\\u1ec9 ph\\u00e9p n\\u0103m (Paid Leave)\",\n    \"Th\\u1eddi gian\": \"15/11/2026 - 16/11/2026 (2 ng\\u00e0y)\",\n    \"L\\u00fd do\": \"Gi\\u1ea3i quy\\u1ebft vi\\u1ec7c c\\u00e1 nh\\u00e2n gia \\u0111\\u00ecnh\"\n  },\n  \"approveUrl\": \"http://localhost:8085/api/v1/actions/quick-approve?token=demo\",\n  \"rejectUrl\": \"http://localhost:8085/api/v1/actions/quick-reject?token=demo\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/admin/notifications/test-chat"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.expect(jsonData.success).to.be.true;",
+                  "pm.test(\"Google Chat Card v2 created/dispatched\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "7.5 Kích hoạt Bản tin Điểm danh Sáng 09:00",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{hrToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/admin/notifications/daily-bulletin"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.expect(jsonData.success).to.be.true;",
+                  "pm.test(\"Daily 09:00 bulletin dispatched to Chat\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "7.6 Xem Nhật ký Thông báo Đã gửi (Audit Logs)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{hrToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/admin/notifications/logs?limit=50"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.expect(jsonData.success).to.be.true;",
+                  "pm.test(\"Logs retrieved\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "7.7 Lấy Thẻ Google Chat v2 Gần đây cho UI Simulator",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{hrToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/admin/notifications/recent-chat-cards"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.expect(jsonData.success).to.be.true;",
+                  "pm.test(\"Recent chat cards returned\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "7.8 Phê duyệt 1 chạm (Quick Approve Endpoint - Không cần login)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/actions/quick-approve?token=INVALID_OR_DEMO_TOKEN"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Quick approve returns styled HTML response (even on invalid token handled gracefully)\", function () {",
+                  "    pm.response.to.be.oneOf([200, 400]);",
+                  "    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"text/html\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
