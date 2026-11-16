@@ -10,7 +10,7 @@ import {
 import ExecutiveAnalyticsDashboard from './ExecutiveAnalyticsDashboard';
 import DetailedTimesheetView from './DetailedTimesheetView';
 
-export default function ManagerPortal({ currentUser, token, setCurrentUser, usersList, onEmployeeUpdated }) {
+export default function ManagerPortal({ currentUser, token, onEmployeeUpdated }) {
   const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard', 'emergencies', 'approvals', 'timesheets', 'departments', 'policies', 'google'
   const [dashboardViewMode, setDashboardViewMode] = useState('live'); // 'live' | 'analytics'
   
@@ -753,48 +753,20 @@ export default function ManagerPortal({ currentUser, token, setCurrentUser, user
 
   const selectedPeriod = (periods || []).find(p => p.id === selectedPeriodId);
 
-  // ACCESS GUARD: If logged in user is only EMPLOYEE, show helpful switch role banner
+  // ACCESS GUARD: If logged in user is only EMPLOYEE, show 403 Forbidden
   if (currentUser?.role === 'EMPLOYEE') {
     return (
       <div className="glass-card rounded-2xl p-8 max-w-lg mx-auto text-center space-y-4 my-12 border border-amber-200 bg-amber-50/50 shadow-lg">
         <div className="w-16 h-16 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center mx-auto">
           <ShieldAlert className="w-8 h-8" />
         </div>
-        <h3 className="text-lg font-bold text-slate-900">Yêu Cầu Quyền Quản Lý Hoặc HR Admin</h3>
+        <h3 className="text-lg font-bold text-slate-900">Truy Cập Bị Hạn Chế (403 Forbidden)</h3>
         <p className="text-xs text-slate-600 leading-relaxed">
-          Tài khoản hiện tại của bạn là <strong>{currentUser?.fullName} ({currentUser?.email})</strong> với vai trò <strong>Nhân viên (EMPLOYEE)</strong> nên không có quyền truy cập Cổng Quản trị.
+          Tài khoản hiện tại của bạn là <strong>{currentUser?.fullName} ({currentUser?.email})</strong> với vai trò <strong>Nhân viên (EMPLOYEE)</strong>. Bạn không có quyền truy cập Cổng Quản trị.
         </p>
         <p className="text-xs text-slate-500 font-medium">
-          Để trải nghiệm duyệt đơn, quản lý quân số, sơ đồ tổ chức và khóa bảng công, vui lòng chọn một trong các vai trò quản trị mẫu bên dưới:
+          Cổng Quản lý và Quản trị Nhân sự chỉ dành riêng cho Quản lý Đội ngũ (MANAGER) và Ban Nhân sự (HR_ADMIN).
         </p>
-        <div className="pt-2 flex flex-col sm:flex-row justify-center gap-3">
-          <button
-            onClick={() => {
-              if (setCurrentUser) {
-                const mgr = usersList?.find(u => u.role === 'MANAGER') || {
-                  email: 'lead@congty.com', fullName: 'Trần Văn Mạnh', role: 'MANAGER', title: 'Tech Director', employeeCode: 'IT001'
-                };
-                setCurrentUser(mgr);
-              }
-            }}
-            className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-1.5"
-          >
-            <Users className="w-4 h-4" /> Chuyển sang Quản lý (Trần Văn Mạnh)
-          </button>
-          <button
-            onClick={() => {
-              if (setCurrentUser) {
-                const hr = usersList?.find(u => u.role === 'HR_ADMIN') || {
-                  email: 'hr@congty.com', fullName: 'Nguyễn Thị Thu', role: 'HR_ADMIN', title: 'HR Manager', employeeCode: 'HR001'
-                };
-                setCurrentUser(hr);
-              }
-            }}
-            className="px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-1.5"
-          >
-            <ShieldCheck className="w-4 h-4" /> Chuyển sang HR Admin (Nguyễn Thị Thu)
-          </button>
-        </div>
       </div>
     );
   }

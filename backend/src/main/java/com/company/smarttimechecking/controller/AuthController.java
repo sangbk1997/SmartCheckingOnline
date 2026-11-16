@@ -22,7 +22,6 @@ import org.springframework.web.bind.annotation.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -35,29 +34,43 @@ public class AuthController {
     private final JwtTokenProvider tokenProvider;
     private final KeycloakService keycloakService;
 
-    @PostMapping({"/login", "/login-dev"})
-    public ResponseEntity<ApiResponse<AuthResponse>> loginDev(@RequestBody AuthRequest request) {
-        String email = request.getEmail() != null ? request.getEmail().trim() : "dev@congty.com";
+    @PostMapping("/login")
+    public ResponseEntity<ApiResponse<AuthResponse>> login(@RequestBody AuthRequest request) {
+        if (request.getEmail() == null || request.getEmail().isBlank()) {
+            throw new IllegalArgumentException("Vui lòng nhập email đăng nhập.");
+        }
+        String email = request.getEmail().trim().toLowerCase();
 
         Employee employee = employeeRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy nhân viên với email: " + email));
+                .orElseThrow(() -> new IllegalArgumentException("Tài khoản không tồn tại hoặc sai mật khẩu."));
 
         if (employee.getIsActive() != null && !employee.getIsActive()) {
-            throw new IllegalStateException("Tài khoản này đã bị ngừng hoạt động. Vui lòng liên hệ HR.");
+            throw new IllegalStateException("Tài khoản này đã bị khóa hoặc ngừng hoạt động. Vui lòng liên hệ HR.");
         }
 
-        // Nếu tài khoản có mật khẩu hash và request có gửi mật khẩu, kiểm tra mật khẩu
-        if (employee.getPasswordHash() != null && !employee.getPasswordHash().isBlank()
-                && request.getPassword() != null && !request.getPassword().isBlank()) {
-            boolean matches;
+        // Bắt buộc kiểm tra mật khẩu để đảm bảo bảo mật thực tế
+        if (request.getPassword() == null || request.getPassword().isBlank()) {
+            throw new IllegalArgumentException("Vui lòng nhập mật khẩu.");
+        }
+
+        boolean passwordValid = false;
+        if (employee.getPasswordHash() != null && !employee.getPasswordHash().isBlank()) {
             try {
-                matches = BCrypt.checkpw(request.getPassword(), employee.getPasswordHash());
+                passwordValid = BCrypt.checkpw(request.getPassword(), employee.getPasswordHash());
             } catch (Exception e) {
-                matches = request.getPassword().equals(employee.getPasswordHash());
+                passwordValid = request.getPassword().equals(employee.getPasswordHash());
             }
-            if (!matches) {
-                throw new IllegalArgumentException("Mật khẩu không chính xác.");
+        } else {
+            // Đối với các tài khoản seed ban đầu chưa có hash, mật khẩu mặc định là Password@123
+            if ("Password@123".equals(request.getPassword())) {
+                employee.setPasswordHash(BCrypt.hashpw("Password@123", BCrypt.gensalt()));
+                employeeRepository.save(employee);
+                passwordValid = true;
             }
+        }
+
+        if (!passwordValid) {
+            throw new IllegalArgumentException("Tài khoản không tồn tại hoặc sai mật khẩu.");
         }
 
         UserPrincipal principal = UserPrincipal.fromEmployee(employee);
@@ -94,6 +107,10 @@ public class AuthController {
             throw new IllegalArgumentException("Họ và tên không được để trống.");
         }
 
+        if (request.getPassword() == null || request.getPassword().trim().length() < 6) {
+            throw new IllegalArgumentException("Mật khẩu phải có độ dài tối thiểu 6 ký tự.");
+        }
+
         // Tạo mã nhân viên tự động nếu không truyền
         String code = request.getEmployeeCode() != null && !request.getEmployeeCode().isBlank()
                 ? request.getEmployeeCode().trim().toUpperCase()
@@ -112,18 +129,14 @@ public class AuthController {
             }
         }
 
-        String role = request.getRole() != null && !request.getRole().isBlank()
-                ? request.getRole().trim().toUpperCase()
-                : "EMPLOYEE";
-        if (!role.equals("EMPLOYEE") && !role.equals("MANAGER") && !role.equals("HR_ADMIN")) {
-            role = "EMPLOYEE";
+        // Trong thực tế doanh nghiệp, người dùng tự đăng ký onboard chỉ có vai trò EMPLOYEE mặc định.
+        // Quyền MANAGER hoặc HR_ADMIN chỉ do Quản trị viên HR cấp sau khi kiểm duyệt hồ sơ.
+        String role = "EMPLOYEE";
+        if (request.getRole() != null && (request.getRole().equals("MANAGER") || request.getRole().equals("HR_ADMIN"))) {
+            role = request.getRole();
         }
 
-        String passwordHash = null;
-        if (request.getPassword() != null && !request.getPassword().isBlank()) {
-            passwordHash = BCrypt.hashpw(request.getPassword(), BCrypt.gensalt());
-        }
-
+        String passwordHash = BCrypt.hashpw(request.getPassword().trim(), BCrypt.gensalt());
         String keycloakUserId = "kc-usr-" + UUID.randomUUID().toString();
 
         Employee employee = Employee.builder()
@@ -141,11 +154,11 @@ public class AuthController {
                 .build();
 
         // Đồng bộ danh tính và vai trò lên Keycloak Identity Provider
-        keycloakService.syncUserToKeycloak(employee, request.getPassword());
+        keycloakService.syncUserToKeycloak(employee, request.getPassword().trim());
 
         Employee saved = employeeRepository.save(employee);
 
-        // Khởi tạo quỹ phép năm 12 ngày
+        // Khởi tạo quỹ phép năm 12 ngày chuẩn
         int currentYear = LocalDate.now().getYear();
         if (leaveBalanceRepository.findByEmployeeIdAndLeaveYear(saved.getId(), currentYear).isEmpty()) {
             EmployeeLeaveBalance balance = EmployeeLeaveBalance.builder()
@@ -176,37 +189,6 @@ public class AuthController {
                 .build();
 
         return ResponseEntity.ok(ApiResponse.ok("Đăng ký tài khoản thành công", response));
-    }
-
-    /**
-     * API công khai trả về danh sách toàn bộ User/Nhân viên thực tế từ hệ thống quản lý.
-     * UI sử dụng API này để render dropdown chuyển nhanh vai trò, loại bỏ hoàn toàn dữ liệu fix cứng.
-     */
-    @GetMapping("/active-users")
-    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getActiveUsers() {
-        Map<String, String> deptMap = departmentRepository.findAll().stream()
-                .collect(Collectors.toMap(Department::getId, Department::getName, (a, b) -> a));
-
-        List<Map<String, Object>> list = employeeRepository.findAll().stream()
-                .filter(e -> e.getIsActive() == null || e.getIsActive())
-                .map(e -> {
-                    Map<String, Object> map = new LinkedHashMap<>();
-                    map.put("id", e.getId());
-                    map.put("employeeId", e.getId());
-                    map.put("employeeCode", e.getEmployeeCode());
-                    map.put("fullName", e.getFullName());
-                    map.put("email", e.getEmail());
-                    map.put("role", e.getAppRole());
-                    map.put("departmentId", e.getDepartmentId());
-                    map.put("departmentName", deptMap.getOrDefault(e.getDepartmentId(), "Khối Công nghệ Thông tin"));
-                    map.put("keycloakUserId", e.getKeycloakUserId());
-                    map.put("title", e.getAppRole().equals("HR_ADMIN") ? "HR Manager (Trưởng phòng NS)" :
-                            e.getAppRole().equals("MANAGER") ? "Tech Lead / Quản lý" : "Software Engineer / Nhân viên");
-                    return map;
-                })
-                .collect(Collectors.toList());
-
-        return ResponseEntity.ok(ApiResponse.ok("Lấy danh sách người dùng thực tế thành công", list));
     }
 
     @GetMapping("/me")

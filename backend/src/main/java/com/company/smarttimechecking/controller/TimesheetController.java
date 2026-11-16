@@ -179,7 +179,9 @@ public class TimesheetController {
             @RequestParam(value = "year", defaultValue = "2026") int year,
             @RequestParam(value = "month", defaultValue = "11") int month) {
 
-        String targetEmpId = (employeeId != null && !employeeId.isBlank()) ? employeeId : (user != null ? user.getId() : "");
+        boolean isPrivileged = user != null && user.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_HR_ADMIN") || a.getAuthority().equals("ROLE_MANAGER"));
+        String targetEmpId = (isPrivileged && employeeId != null && !employeeId.isBlank()) ? employeeId : (user != null ? user.getId() : "");
         com.company.smarttimechecking.domain.entity.Employee employee = employeeRepository.findById(targetEmpId).orElse(null);
 
         YearMonth ym = YearMonth.of(year, month);
@@ -403,7 +405,9 @@ public class TimesheetController {
             @RequestParam(value = "employeeId", required = false) String employeeId,
             @RequestParam(value = "year", defaultValue = "2026") int year) {
 
-        String targetEmpId = (employeeId != null && !employeeId.isBlank()) ? employeeId : (user != null ? user.getId() : "");
+        boolean isPrivileged = user != null && user.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_HR_ADMIN") || a.getAuthority().equals("ROLE_MANAGER"));
+        String targetEmpId = (isPrivileged && employeeId != null && !employeeId.isBlank()) ? employeeId : (user != null ? user.getId() : "");
         com.company.smarttimechecking.domain.entity.Employee employee = employeeRepository.findById(targetEmpId).orElse(null);
 
         List<Map<String, Object>> months = new ArrayList<>();

@@ -16,6 +16,8 @@ export default function EmployeePortal({ currentUser, token }) {
   const [selectedPeriodId, setSelectedPeriodId] = useState('');
   const [myTimesheet, setMyTimesheet] = useState(null);
   const [myDisputes, setMyDisputes] = useState([]);
+  const [myDevice, setMyDevice] = useState(null);
+  const [deviceLoading, setDeviceLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [punchFeedback, setPunchFeedback] = useState(null);
 
@@ -51,10 +53,24 @@ export default function EmployeePortal({ currentUser, token }) {
   // Custom QR test state (để test mã hết hạn / sai IP)
   const [customQrPayload, setCustomQrPayload] = useState('');
 
-  // Load Quotas & Lịch sử hôm nay & Bảng công
+  // Load Quotas & Lịch sử hôm nay & Bảng công & Thiết bị
   const loadData = async () => {
     if (!token) return;
     try {
+      // 0. Thiết bị bảo mật
+      fetch('/api/v1/devices/my-device', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.data) {
+            setMyDevice(data.data);
+          } else {
+            setMyDevice(null);
+          }
+        })
+        .catch(err => console.error("Lỗi lấy thông tin thiết bị:", err));
+
       // 1. Quotas
       const qRes = await fetch('/api/v1/requests/quotas/remaining', {
         headers: { Authorization: `Bearer ${token}` }
@@ -105,21 +121,58 @@ export default function EmployeePortal({ currentUser, token }) {
     loadData();
   }, [token, currentUser]);
 
-  // Load bảng công cá nhân theo kỳ
+  // Liên kết thiết bị hiện tại (Device Binding)
+  const handleEnrollThisDevice = async () => {
+    if (!token || !currentUser) return null;
+    setDeviceLoading(true);
+    try {
+      const code = currentUser.employeeCode || currentUser.id?.substring(0, 8) || 'EMP';
+      const isMac = navigator.userAgent.includes('Mac');
+      const isWin = navigator.userAgent.includes('Win');
+      const platformName = isMac ? 'macOS' : isWin ? 'Windows' : 'Mobile';
+      const browserName = navigator.userAgent.includes('Chrome') ? 'Chrome' : navigator.userAgent.includes('Safari') ? 'Safari' : 'Browser';
+      const deviceToken = `DEV_${code}_${platformName.toUpperCase()}_${window.location.hostname.replace(/[^a-zA-Z0-9]/g, '')}`;
+      const deviceName = `${platformName} (${browserName})`;
+
+      const res = await fetch('/api/v1/devices/enroll', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          deviceToken,
+          deviceName,
+          platform: platformName
+        })
+      });
+      const data = await res.json();
+      if (data.success && data.data) {
+        setMyDevice(data.data);
+        return data.data;
+      }
+    } catch (e) {
+      console.error("Lỗi đăng ký thiết bị:", e);
+    } finally {
+      setDeviceLoading(false);
+    }
+    return null;
+  };
+
+  // Load bảng công cá nhân theo kỳ (Dữ liệu cô lập bảo mật của riêng user)
   useEffect(() => {
     if (!selectedPeriodId || !token) return;
     const fetchMyTimesheet = async () => {
       try {
-        const res = await fetch(`/api/v1/timesheets/periods/${selectedPeriodId}/matrix`, {
+        const res = await fetch(`/api/v1/timesheets/my-timesheet?periodId=${selectedPeriodId}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         const data = await res.json();
-        if (data.success && data.data) {
-          const mine = data.data.find(ts => ts.employeeId === currentUser?.employeeId || ts.employeeId === 'e3333333-3333-3333-3333-333333333333');
-          setMyTimesheet(mine || data.data[0] || null);
+        if (data.success) {
+          setMyTimesheet(data.data || null);
         }
       } catch (e) {
-        console.error(e);
+        console.error("Lỗi tải bảng công cá nhân:", e);
       }
     };
     fetchMyTimesheet();
@@ -130,6 +183,22 @@ export default function EmployeePortal({ currentUser, token }) {
     setLoading(true);
     setPunchFeedback(null);
     try {
+      // Đảm bảo thiết bị đã liên kết
+      let activeDev = myDevice;
+      if (!activeDev) {
+        activeDev = await handleEnrollThisDevice();
+      }
+
+      if (!activeDev?.deviceToken) {
+        setPunchFeedback({
+          success: false,
+          code: 'ERR_DEVICE_NOT_BOUND',
+          message: 'Vui lòng liên kết thiết bị trước khi chấm công',
+          hrGuide: 'Bấm nút "Liên kết thiết bị này" trên góc phải màn hình để bảo vệ tài khoản.'
+        });
+        return;
+      }
+
       let qrPayload = overridePayload;
       if (!qrPayload) {
         // 1. Lấy mã QR Kiosk mới nhất
@@ -138,7 +207,7 @@ export default function EmployeePortal({ currentUser, token }) {
         qrPayload = qrData.data?.qrPayload;
       }
 
-      // 2. Gọi API chấm công với deviceToken đã đăng ký
+      // 2. Gọi API chấm công với deviceToken của chính tài khoản này
       const res = await fetch('/api/v1/attendance/punch', {
         method: 'POST',
         headers: {
@@ -147,7 +216,7 @@ export default function EmployeePortal({ currentUser, token }) {
         },
         body: JSON.stringify({
           qrPayload: qrPayload,
-          deviceToken: 'FP_DEVICE_TOKEN_DEV_IPHONE_15_PRO',
+          deviceToken: activeDev.deviceToken,
           punchType: punchType
         })
       });
@@ -292,10 +361,20 @@ export default function EmployeePortal({ currentUser, token }) {
           <Smartphone className="w-4 h-4 text-indigo-600" />
           <div>
             <div className="text-slate-500 text-[10px]">Thiết bị bảo mật đã đăng ký:</div>
-            <div className="font-bold text-slate-800 flex items-center gap-1.5">
-              iPhone 15 Pro Max
-              <span className="w-2 h-2 rounded-full bg-emerald-500" title="Đã kích hoạt Device Binding"></span>
-            </div>
+            {myDevice ? (
+              <div className="font-bold text-slate-800 flex items-center gap-1.5">
+                <span>{myDevice.deviceName || 'Thiết bị của tôi'} ({myDevice.platform})</span>
+                <span className="w-2 h-2 rounded-full bg-emerald-500" title="Đã kích hoạt Device Binding"></span>
+              </div>
+            ) : (
+              <button
+                onClick={handleEnrollThisDevice}
+                disabled={deviceLoading}
+                className="mt-0.5 text-xs text-indigo-600 hover:text-indigo-800 font-bold underline flex items-center gap-1"
+              >
+                {deviceLoading ? 'Đang liên kết...' : '+ Liên kết thiết bị hiện tại'}
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -930,7 +1009,7 @@ export default function EmployeePortal({ currentUser, token }) {
         onClose={() => setIsCameraModalOpen(false)}
         punchType={scannerPunchType}
         currentUser={currentUser}
-        activeDevice={{ id: 'dev-iphone-15-pro-max-9988', deviceName: 'iPhone 15 Pro Max' }}
+        activeDevice={myDevice}
         onPunchSuccess={(punchData) => {
           loadData();
           setIsCameraModalOpen(false);

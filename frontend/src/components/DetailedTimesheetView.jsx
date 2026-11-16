@@ -26,8 +26,8 @@ export default function DetailedTimesheetView({
   const fetchCalendar = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      const targetEmp = selectedEmployeeId || currentUser?.id || '';
+      const token = localStorage.getItem('smarttime_token') || localStorage.getItem('token');
+      const targetEmp = isManagerView ? (selectedEmployeeId || currentUser?.id || '') : (currentUser?.id || currentUser?.employeeId || '');
       const url = `/api/v1/timesheets/calendar?year=${selectedYear}&month=${selectedMonth}&employeeId=${targetEmp}`;
       const res = await fetch(url, {
         headers: token ? { 'Authorization': `Bearer ${token}` } : {}
@@ -47,8 +47,8 @@ export default function DetailedTimesheetView({
   const fetchYearly = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      const targetEmp = selectedEmployeeId || currentUser?.id || '';
+      const token = localStorage.getItem('smarttime_token') || localStorage.getItem('token');
+      const targetEmp = isManagerView ? (selectedEmployeeId || currentUser?.id || '') : (currentUser?.id || currentUser?.employeeId || '');
       const url = `/api/v1/timesheets/yearly-overview?year=${selectedYear}&employeeId=${targetEmp}`;
       const res = await fetch(url, {
         headers: token ? { 'Authorization': `Bearer ${token}` } : {}

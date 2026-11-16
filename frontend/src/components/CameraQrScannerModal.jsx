@@ -159,12 +159,9 @@ export default function CameraQrScannerModal({
     setCameraError('');
 
     try {
-      // Default coordinates (HQ)
-      const lat = 10.7769;
-      const lng = 106.7009;
-      const devId = activeDevice?.id || 'dev-iphone-15-pro-max-9988';
+      const token = localStorage.getItem('smarttime_token') || localStorage.getItem('token');
+      const deviceToken = activeDevice?.deviceToken || 'FP_DEVICE_TOKEN_DEV_IPHONE_15_PRO';
 
-      const token = localStorage.getItem('token');
       const response = await fetch('/api/v1/attendance/punch', {
         method: 'POST',
         headers: {
@@ -174,10 +171,7 @@ export default function CameraQrScannerModal({
         body: JSON.stringify({
           punchType: punchType,
           qrPayload: qrPayloadString,
-          deviceId: devId,
-          latitude: lat,
-          longitude: lng,
-          isWfh: false
+          deviceToken: deviceToken
         })
       });
 

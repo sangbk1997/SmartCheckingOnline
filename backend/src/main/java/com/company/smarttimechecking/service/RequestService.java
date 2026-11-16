@@ -144,6 +144,10 @@ public class RequestService {
 
     @Transactional
     public AttendanceRequest reviewRequest(UserPrincipal reviewer, String requestId, ApprovalDto dto) {
+        if (reviewer == null || (!"HR_ADMIN".equalsIgnoreCase(reviewer.getRole()) && !"MANAGER".equalsIgnoreCase(reviewer.getRole()))) {
+            throw new IllegalArgumentException("Chỉ Quản lý hoặc Ban Nhân sự (HR) mới có quyền xét duyệt đơn từ!");
+        }
+
         AttendanceRequest request = requestRepository.findById(requestId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đơn với ID: " + requestId));
 

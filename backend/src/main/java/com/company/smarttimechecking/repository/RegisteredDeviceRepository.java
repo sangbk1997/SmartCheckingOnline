@@ -10,7 +10,7 @@ import java.util.Optional;
 @Repository
 public interface RegisteredDeviceRepository extends JpaRepository<RegisteredDevice, String> {
     Optional<RegisteredDevice> findByDeviceToken(String deviceToken);
-    Optional<RegisteredDevice> findByEmployeeIdAndStatus(String employeeId, String status);
+    List<RegisteredDevice> findByEmployeeIdAndStatusOrderByLastUsedAtDesc(String employeeId, String status);
     List<RegisteredDevice> findByEmployeeId(String employeeId);
     List<RegisteredDevice> findByStatus(String status);
 }

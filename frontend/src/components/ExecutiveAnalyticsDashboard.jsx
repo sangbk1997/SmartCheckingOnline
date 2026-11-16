@@ -13,7 +13,7 @@ export default function ExecutiveAnalyticsDashboard({ currentUser }) {
   const fetchAnalytics = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('smarttime_token') || localStorage.getItem('token');
       const res = await fetch('/api/v1/timesheets/admin/analytics', {
         headers: token ? { 'Authorization': `Bearer ${token}` } : {}
       });

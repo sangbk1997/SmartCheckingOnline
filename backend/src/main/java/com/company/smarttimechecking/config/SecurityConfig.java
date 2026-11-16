@@ -37,8 +37,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/auth/**", "/api/v1/kiosk/**", "/api/v1/actions/**", "/ws/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/departments").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        // Phân quyền Admin / HR
+                        // Phân quyền Admin / HR / Manager
                         .requestMatchers("/api/v1/admin/**", "/api/v1/timesheets/admin/**", "/api/v1/devices/admin/**").hasAnyRole("HR_ADMIN", "MANAGER")
+                        .requestMatchers("/api/v1/requests/*/review", "/api/v1/requests/*/approve", "/api/v1/requests/*/reject", "/api/v1/requests/pending").hasAnyRole("HR_ADMIN", "MANAGER")
                         // Các API còn lại yêu cầu đăng nhập
                         .anyRequest().authenticated()
                 )

@@ -1,15 +1,13 @@
 import React, { useState } from 'react';
 import { 
-  Clock, ShieldCheck, User, Users, Tv, CheckCircle2, ChevronDown, 
-  LogIn, UserPlus, LogOut, Sparkles, AlertCircle 
+  Clock, ShieldCheck, User, Users, Tv, ChevronDown, 
+  LogIn, UserPlus, LogOut, CheckCircle2, Building 
 } from 'lucide-react';
 
 export default function Navbar({ 
   activeTab, 
   setActiveTab, 
   currentUser, 
-  setCurrentUser, 
-  usersList = [], 
   onOpenAuthModal, 
   onLogout 
 }) {
@@ -97,13 +95,13 @@ export default function Navbar({
           {/* User Auth Section */}
           <div className="flex items-center space-x-2.5">
             {currentUser ? (
-              /* User Profile & Role Dropdown */
+              /* Logged In: Dedicated User Profile Card (Secure - No Switcher) */
               <div className="relative">
                 <div 
                   onClick={() => setDropdownOpen(!dropdownOpen)}
                   className="flex items-center space-x-2.5 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 hover:bg-slate-100 cursor-pointer transition-colors"
                 >
-                  <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-indigo-500 to-violet-600 text-white flex items-center justify-center font-bold text-xs shadow-sm">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-600 to-violet-600 text-white flex items-center justify-center font-bold text-xs shadow-sm">
                     {currentUser?.fullName?.charAt(0) || 'U'}
                   </div>
                   <div className="text-left hidden sm:block">
@@ -111,58 +109,51 @@ export default function Navbar({
                       {currentUser?.fullName || 'Người dùng'}
                     </div>
                     <div className="text-[10px] text-indigo-600 font-semibold uppercase flex items-center gap-1">
-                      {currentUser?.role === 'HR_ADMIN' ? 'HR Admin' : currentUser?.role === 'MANAGER' ? 'Tech Lead' : 'Nhân viên'}
+                      {currentUser?.role === 'HR_ADMIN' ? 'HR Admin' : currentUser?.role === 'MANAGER' ? 'Quản lý' : 'Nhân viên'}
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                     </div>
                   </div>
                   <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
                 </div>
 
-                {/* Dropdown Menu */}
+                {/* Profile Popup Menu */}
                 {dropdownOpen && (
                   <div 
                     onMouseLeave={() => setDropdownOpen(false)}
-                    className="absolute right-0 mt-1.5 w-64 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-50 animate-in fade-in zoom-in-95 duration-150"
+                    className="absolute right-0 mt-2 w-72 bg-white rounded-2xl shadow-xl border border-slate-100 py-3 z-50 animate-in fade-in zoom-in-95 duration-150"
                   >
-                    <div className="px-3.5 py-2 border-b border-slate-100">
-                      <div className="text-xs font-bold text-slate-900">{currentUser.fullName}</div>
-                      <div className="text-[11px] text-slate-500 truncate">{currentUser.email}</div>
-                      <div className="mt-1 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700">
-                        {currentUser.role} • {currentUser.employeeCode || 'EMP'}
+                    <div className="px-4 pb-3 border-b border-slate-100">
+                      <div className="text-xs font-extrabold text-slate-900">{currentUser.fullName}</div>
+                      <div className="text-[11px] text-slate-500 truncate mt-0.5">{currentUser.email}</div>
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700">
+                          {currentUser.role}
+                        </span>
+                        {currentUser.employeeCode && (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-100 text-slate-700">
+                            Mã: {currentUser.employeeCode}
+                          </span>
+                        )}
                       </div>
                     </div>
 
-                    <div className="px-3.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                      Chuyển nhanh vai trò thử nghiệm
+                    <div className="px-4 py-2 text-[11px] text-slate-600 space-y-1">
+                      <div className="flex items-center gap-1.5 text-emerald-700 font-medium">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Phiên làm việc bảo mật (JWT Encrypted)</span>
+                      </div>
+                      <div className="text-[10px] text-slate-400">
+                        Danh tính đồng bộ Keycloak IAM
+                      </div>
                     </div>
-                    {usersList.map((u) => (
-                      <button
-                        key={u.email}
-                        onClick={() => {
-                          setCurrentUser(u);
-                          setDropdownOpen(false);
-                        }}
-                        className={`w-full text-left px-3.5 py-1.5 text-xs flex items-center justify-between hover:bg-indigo-50 transition-colors ${
-                          currentUser.email === u.email ? 'bg-indigo-50/70 font-semibold text-indigo-700' : 'text-slate-700'
-                        }`}
-                      >
-                        <div>
-                          <div className="font-medium text-xs">{u.fullName}</div>
-                          <div className="text-[10px] text-slate-400">{u.role}</div>
-                        </div>
-                        {currentUser.email === u.email && (
-                          <CheckCircle2 className="w-3.5 h-3.5 text-indigo-600 flex-shrink-0" />
-                        )}
-                      </button>
-                    ))}
 
-                    <div className="border-t border-slate-100 mt-1 pt-1">
+                    <div className="border-t border-slate-100 mt-2 pt-2 px-2">
                       <button
                         onClick={() => {
-                          onLogout();
                           setDropdownOpen(false);
+                          onLogout();
                         }}
-                        className="w-full text-left px-3.5 py-2 text-xs text-red-600 font-semibold hover:bg-red-50 flex items-center gap-2 transition-colors"
+                        className="w-full text-left px-3 py-2 rounded-xl text-xs text-red-600 font-bold hover:bg-red-50 flex items-center gap-2 transition-colors"
                       >
                         <LogOut className="w-3.5 h-3.5" />
                         Đăng xuất khỏi hệ thống

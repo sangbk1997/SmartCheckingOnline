@@ -1,17 +1,14 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import LandingPage from './components/LandingPage';
 import KioskScreen from './components/KioskScreen';
 import EmployeePortal from './components/EmployeePortal';
 import ManagerPortal from './components/ManagerPortal';
 import AuthModal from './components/AuthModal';
-import { ShieldAlert, LogIn, ArrowRight } from 'lucide-react';
+import { ShieldAlert, LogIn, ArrowRight, LogOut, ArrowLeft } from 'lucide-react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('home'); // 'home', 'employee', 'manager', 'kiosk'
-  
-  // Danh sách người dùng thực tế lấy từ Database qua API /api/v1/auth/active-users
-  const [usersList, setUsersList] = useState([]);
 
   // Khởi tạo user & token từ localStorage hoặc null nếu chưa đăng nhập
   const [currentUser, setCurrentUser] = useState(() => {
@@ -24,59 +21,12 @@ export default function App() {
   });
 
   const [token, setToken] = useState(() => {
-    return localStorage.getItem('smarttime_token') || '';
+    return localStorage.getItem('smarttime_token') || localStorage.getItem('token') || '';
   });
 
   // Auth Modal State
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState('login'); // 'login' | 'register'
-
-  // Hàm tải danh sách người dùng thực tế từ hệ thống quản lý
-  const refreshUsers = useCallback(async () => {
-    try {
-      const res = await fetch('/api/v1/auth/active-users');
-      const data = await res.json();
-      if (data.success && Array.isArray(data.data) && data.data.length > 0) {
-        setUsersList(data.data);
-      }
-    } catch (err) {
-      console.error("Lỗi đồng bộ danh sách users từ hệ thống:", err);
-    }
-  }, []);
-
-  useEffect(() => {
-    refreshUsers();
-  }, [refreshUsers]);
-
-  // Khi currentUser thay đổi, đồng bộ JWT token
-  useEffect(() => {
-    if (!currentUser) {
-      setToken('');
-      localStorage.removeItem('smarttime_user');
-      localStorage.removeItem('smarttime_token');
-      return;
-    }
-
-    localStorage.setItem('smarttime_user', JSON.stringify(currentUser));
-
-    const fetchToken = async () => {
-      try {
-        const res = await fetch('/api/v1/auth/login-dev', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: currentUser.email })
-        });
-        const data = await res.json();
-        if (data.success && data.data?.token) {
-          setToken(data.data.token);
-          localStorage.setItem('smarttime_token', data.data.token);
-        }
-      } catch (err) {
-        console.error("Lỗi lấy JWT:", err);
-      }
-    };
-    fetchToken();
-  }, [currentUser]);
 
   // Xử lý khi đăng nhập hoặc đăng ký thành công từ AuthModal
   const handleAuthSuccess = (authData) => {
@@ -93,9 +43,7 @@ export default function App() {
     setToken(authData.token);
     localStorage.setItem('smarttime_user', JSON.stringify(newUser));
     localStorage.setItem('smarttime_token', authData.token);
-
-    // Làm mới danh sách user từ hệ thống
-    refreshUsers();
+    localStorage.setItem('token', authData.token);
 
     // Tự động chuyển đến cổng thích hợp
     if (authData.role === 'MANAGER' || authData.role === 'HR_ADMIN') {
@@ -111,6 +59,7 @@ export default function App() {
     setToken('');
     localStorage.removeItem('smarttime_user');
     localStorage.removeItem('smarttime_token');
+    localStorage.removeItem('token');
     setActiveTab('home');
   };
 
@@ -133,7 +82,6 @@ export default function App() {
         setActiveTab={setActiveTab}
         currentUser={currentUser}
         setCurrentUser={setCurrentUser}
-        usersList={usersList}
         onOpenAuthModal={handleOpenAuthModal}
         onLogout={handleLogout}
       />
@@ -225,43 +173,34 @@ export default function App() {
                 </p>
               </div>
 
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-left space-y-2">
-                <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                  Chuyển nhanh sang tài khoản Quản lý trong cơ sở dữ liệu:
-                </div>
-                <div className="flex flex-col gap-1.5 max-h-48 overflow-y-auto">
-                  {usersList.filter(u => u.role === 'MANAGER' || u.role === 'HR_ADMIN').slice(0, 4).map(u => (
-                    <button
-                      key={u.id}
-                      onClick={() => setCurrentUser(u)}
-                      className="w-full py-2 px-3 rounded-xl bg-white hover:bg-indigo-50 border border-slate-200 text-xs font-semibold text-slate-800 flex items-center justify-between transition group"
-                    >
-                      <div className="text-left">
-                        <div>{u.fullName}</div>
-                        <div className="text-[10px] text-slate-400">{u.departmentName}</div>
-                      </div>
-                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${u.role === 'HR_ADMIN' ? 'bg-purple-100 text-purple-800' : 'bg-amber-100 text-amber-800'}`}>
-                        {u.role}
-                      </span>
-                    </button>
-                  ))}
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+                <p className="text-xs text-slate-500">
+                  Để truy cập cổng này, vui lòng đăng nhập với tài khoản quản lý hoặc liên hệ bộ phận IT / HR để được cấp quyền.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                  <button
+                    onClick={() => {
+                      handleLogout();
+                      handleOpenAuthModal('login');
+                    }}
+                    className="py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-sm transition flex items-center justify-center gap-1.5"
+                  >
+                    <LogOut className="w-4 h-4" /> Đăng Nhập Tài Khoản Khác
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('employee')}
+                    className="py-2.5 px-4 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs transition flex items-center justify-center gap-1.5"
+                  >
+                    <ArrowLeft className="w-4 h-4" /> Về Cổng Nhân Viên
+                  </button>
                 </div>
               </div>
-
-              <button
-                onClick={() => setActiveTab('employee')}
-                className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center justify-center gap-1 mx-auto"
-              >
-                ← Quay lại Cổng Nhân viên của tôi
-              </button>
             </div>
           ) : (
             <ManagerPortal
               currentUser={currentUser}
               token={token}
               setCurrentUser={setCurrentUser}
-              usersList={usersList}
-              onEmployeeUpdated={refreshUsers}
             />
           )
         )}
@@ -273,7 +212,6 @@ export default function App() {
         onClose={() => setAuthModalOpen(false)}
         onAuthSuccess={handleAuthSuccess}
         initialMode={authModalMode}
-        usersList={usersList}
       />
 
       {/* Footer */}

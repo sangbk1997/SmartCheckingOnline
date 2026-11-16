@@ -58,7 +58,8 @@ public class DeviceService {
     }
 
     public Optional<RegisteredDevice> getActiveDevice(String employeeId) {
-        return deviceRepository.findByEmployeeIdAndStatus(employeeId, "ACTIVE");
+        List<RegisteredDevice> active = deviceRepository.findByEmployeeIdAndStatusOrderByLastUsedAtDesc(employeeId, "ACTIVE");
+        return active.isEmpty() ? Optional.empty() : Optional.of(active.get(0));
     }
 
     public List<RegisteredDevice> getAllDevices() {
