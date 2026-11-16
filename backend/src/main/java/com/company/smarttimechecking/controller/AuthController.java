@@ -12,6 +12,7 @@ import com.company.smarttimechecking.repository.EmployeeLeaveBalanceRepository;
 import com.company.smarttimechecking.repository.EmployeeRepository;
 import com.company.smarttimechecking.security.JwtTokenProvider;
 import com.company.smarttimechecking.security.UserPrincipal;
+import com.company.smarttimechecking.service.KeycloakService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -20,8 +21,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -32,6 +33,7 @@ public class AuthController {
     private final EmployeeLeaveBalanceRepository leaveBalanceRepository;
     private final DepartmentRepository departmentRepository;
     private final JwtTokenProvider tokenProvider;
+    private final KeycloakService keycloakService;
 
     @PostMapping({"/login", "/login-dev"})
     public ResponseEntity<ApiResponse<AuthResponse>> loginDev(@RequestBody AuthRequest request) {
@@ -122,9 +124,11 @@ public class AuthController {
             passwordHash = BCrypt.hashpw(request.getPassword(), BCrypt.gensalt());
         }
 
+        String keycloakUserId = "kc-usr-" + UUID.randomUUID().toString();
+
         Employee employee = Employee.builder()
                 .id(UUID.randomUUID().toString())
-                .keycloakUserId("kc-" + code.toLowerCase())
+                .keycloakUserId(keycloakUserId)
                 .employeeCode(code)
                 .fullName(request.getFullName().trim())
                 .email(email)
@@ -135,6 +139,9 @@ public class AuthController {
                 .isActive(true)
                 .appRole(role)
                 .build();
+
+        // Đồng bộ danh tính và vai trò lên Keycloak Identity Provider
+        keycloakService.syncUserToKeycloak(employee, request.getPassword());
 
         Employee saved = employeeRepository.save(employee);
 
@@ -169,6 +176,37 @@ public class AuthController {
                 .build();
 
         return ResponseEntity.ok(ApiResponse.ok("Đăng ký tài khoản thành công", response));
+    }
+
+    /**
+     * API công khai trả về danh sách toàn bộ User/Nhân viên thực tế từ hệ thống quản lý.
+     * UI sử dụng API này để render dropdown chuyển nhanh vai trò, loại bỏ hoàn toàn dữ liệu fix cứng.
+     */
+    @GetMapping("/active-users")
+    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getActiveUsers() {
+        Map<String, String> deptMap = departmentRepository.findAll().stream()
+                .collect(Collectors.toMap(Department::getId, Department::getName, (a, b) -> a));
+
+        List<Map<String, Object>> list = employeeRepository.findAll().stream()
+                .filter(e -> e.getIsActive() == null || e.getIsActive())
+                .map(e -> {
+                    Map<String, Object> map = new LinkedHashMap<>();
+                    map.put("id", e.getId());
+                    map.put("employeeId", e.getId());
+                    map.put("employeeCode", e.getEmployeeCode());
+                    map.put("fullName", e.getFullName());
+                    map.put("email", e.getEmail());
+                    map.put("role", e.getAppRole());
+                    map.put("departmentId", e.getDepartmentId());
+                    map.put("departmentName", deptMap.getOrDefault(e.getDepartmentId(), "Khối Công nghệ Thông tin"));
+                    map.put("keycloakUserId", e.getKeycloakUserId());
+                    map.put("title", e.getAppRole().equals("HR_ADMIN") ? "HR Manager (Trưởng phòng NS)" :
+                            e.getAppRole().equals("MANAGER") ? "Tech Lead / Quản lý" : "Software Engineer / Nhân viên");
+                    return map;
+                })
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(ApiResponse.ok("Lấy danh sách người dùng thực tế thành công", list));
     }
 
     @GetMapping("/me")

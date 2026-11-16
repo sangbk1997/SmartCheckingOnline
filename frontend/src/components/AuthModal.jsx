@@ -52,6 +52,18 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
     }
   }, [isOpen]);
 
+  const demoUsers = usersList.length > 0
+    ? [
+        usersList.find(u => u.role === 'EMPLOYEE') || { email: 'dev@congty.com', fullName: 'Lê Hoàng Nam', role: 'EMPLOYEE' },
+        usersList.find(u => u.role === 'MANAGER') || { email: 'lead@congty.com', fullName: 'Trần Văn Mạnh', role: 'MANAGER' },
+        usersList.find(u => u.role === 'HR_ADMIN') || { email: 'hr@congty.com', fullName: 'Nguyễn Thị Thu', role: 'HR_ADMIN' }
+      ]
+    : [
+        { email: 'dev@congty.com', fullName: 'Lê Hoàng Nam', role: 'EMPLOYEE' },
+        { email: 'lead@congty.com', fullName: 'Trần Văn Mạnh', role: 'MANAGER' },
+        { email: 'hr@congty.com', fullName: 'Nguyễn Thị Thu', role: 'HR_ADMIN' }
+      ];
+
   if (!isOpen) return null;
 
   // Xử lý Đăng Nhập
@@ -299,47 +311,25 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
                   Đăng Nhập Nhanh 1-Click (Tài Khoản Mẫu)
                 </div>
                 <div className="grid grid-cols-1 gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => handleQuickLogin('dev@congty.com')}
-                    className="w-full px-3 py-2 text-left text-xs rounded-xl bg-slate-50 hover:bg-indigo-50/80 border border-slate-200/80 flex items-center justify-between transition-colors group"
-                  >
-                    <div>
-                      <span className="font-bold text-slate-800 group-hover:text-indigo-700">Lê Hoàng Nam</span>
-                      <span className="text-[11px] text-slate-500 ml-1.5">(dev@congty.com)</span>
-                    </div>
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700">
-                      EMPLOYEE
-                    </span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleQuickLogin('lead@congty.com')}
-                    className="w-full px-3 py-2 text-left text-xs rounded-xl bg-slate-50 hover:bg-indigo-50/80 border border-slate-200/80 flex items-center justify-between transition-colors group"
-                  >
-                    <div>
-                      <span className="font-bold text-slate-800 group-hover:text-indigo-700">Trần Văn Mạnh</span>
-                      <span className="text-[11px] text-slate-500 ml-1.5">(lead@congty.com)</span>
-                    </div>
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700">
-                      MANAGER
-                    </span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleQuickLogin('hr@congty.com')}
-                    className="w-full px-3 py-2 text-left text-xs rounded-xl bg-slate-50 hover:bg-indigo-50/80 border border-slate-200/80 flex items-center justify-between transition-colors group"
-                  >
-                    <div>
-                      <span className="font-bold text-slate-800 group-hover:text-indigo-700">Nguyễn Thị Thu</span>
-                      <span className="text-[11px] text-slate-500 ml-1.5">(hr@congty.com)</span>
-                    </div>
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-700">
-                      HR_ADMIN
-                    </span>
-                  </button>
+                  {demoUsers.map((u) => (
+                    <button
+                      key={u.email}
+                      type="button"
+                      onClick={() => handleQuickLogin(u.email)}
+                      className="w-full px-3 py-2 text-left text-xs rounded-xl bg-slate-50 hover:bg-indigo-50/80 border border-slate-200/80 flex items-center justify-between transition-colors group"
+                    >
+                      <div>
+                        <span className="font-bold text-slate-800 group-hover:text-indigo-700">{u.fullName}</span>
+                        <span className="text-[11px] text-slate-500 ml-1.5">({u.email})</span>
+                      </div>
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                        u.role === 'HR_ADMIN' ? 'bg-purple-100 text-purple-700' :
+                        u.role === 'MANAGER' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'
+                      }`}>
+                        {u.role}
+                      </span>
+                    </button>
+                  ))}
                 </div>
               </div>
             </form>

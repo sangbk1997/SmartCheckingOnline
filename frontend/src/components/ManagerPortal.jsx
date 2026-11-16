@@ -10,7 +10,7 @@ import {
 import ExecutiveAnalyticsDashboard from './ExecutiveAnalyticsDashboard';
 import DetailedTimesheetView from './DetailedTimesheetView';
 
-export default function ManagerPortal({ currentUser, token, setCurrentUser, usersList }) {
+export default function ManagerPortal({ currentUser, token, setCurrentUser, usersList, onEmployeeUpdated }) {
   const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard', 'emergencies', 'approvals', 'timesheets', 'departments', 'policies', 'google'
   const [dashboardViewMode, setDashboardViewMode] = useState('live'); // 'live' | 'analytics'
   
@@ -453,9 +453,10 @@ export default function ManagerPortal({ currentUser, token, setCurrentUser, user
         body: JSON.stringify(empForm)
       });
       const data = await res.json();
-      setActionFeedback({ message: empForm.id ? 'Đã cập nhật nhân viên thành công!' : 'Đã thêm nhân viên mới thành công!' });
+      setActionFeedback({ message: empForm.id ? 'Đã cập nhật nhân viên và đồng bộ Keycloak thành công!' : 'Đã thêm nhân viên mới và đồng bộ Keycloak thành công!' });
       setShowEmpModal(false);
       loadData();
+      if (onEmployeeUpdated) onEmployeeUpdated();
     } catch (e) {
       console.error(e);
     } finally {
@@ -510,8 +511,9 @@ export default function ManagerPortal({ currentUser, token, setCurrentUser, user
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
-      setActionFeedback({ message: 'Đã ngừng hoạt động nhân viên thành công!' });
+      setActionFeedback({ message: 'Đã ngừng hoạt động nhân viên và vô hiệu hóa Keycloak thành công!' });
       loadData();
+      if (onEmployeeUpdated) onEmployeeUpdated();
     } catch (e) {
       console.error(e);
     } finally {

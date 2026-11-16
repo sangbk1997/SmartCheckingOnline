@@ -35,6 +35,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // Public endpoints
                         .requestMatchers("/api/v1/auth/**", "/api/v1/kiosk/**", "/api/v1/actions/**", "/ws/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/departments").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         // Phân quyền Admin / HR
                         .requestMatchers("/api/v1/admin/**", "/api/v1/timesheets/admin/**", "/api/v1/devices/admin/**").hasAnyRole("HR_ADMIN", "MANAGER")

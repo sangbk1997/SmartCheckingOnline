@@ -1,53 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Navbar from './components/Navbar';
 import LandingPage from './components/LandingPage';
 import KioskScreen from './components/KioskScreen';
 import EmployeePortal from './components/EmployeePortal';
 import ManagerPortal from './components/ManagerPortal';
 import AuthModal from './components/AuthModal';
-import { ShieldAlert, LogIn, ArrowRight, UserCheck } from 'lucide-react';
-
-const USERS = [
-  {
-    email: 'dev@congty.com',
-    fullName: 'Lê Hoàng Nam',
-    title: 'Software Engineer (Kỹ thuật)',
-    role: 'EMPLOYEE',
-    employeeCode: 'IT002'
-  },
-  {
-    email: 'lead@congty.com',
-    fullName: 'Trần Văn Mạnh',
-    title: 'Tech Lead (Trưởng nhóm CN)',
-    role: 'MANAGER',
-    employeeCode: 'IT001'
-  },
-  {
-    email: 'hr@congty.com',
-    fullName: 'Nguyễn Thị Thu',
-    title: 'HR Manager (Trưởng phòng NS)',
-    role: 'HR_ADMIN',
-    employeeCode: 'HR001'
-  },
-  {
-    email: 'tuan.pham@smartcorp.com',
-    fullName: 'Phạm Minh Tuấn',
-    title: 'Software Dev Lead',
-    role: 'MANAGER',
-    employeeCode: 'DEV001'
-  },
-  {
-    email: 'mai.hoang@smartcorp.com',
-    fullName: 'Hoàng Thị Mai',
-    title: 'HR C&B Specialist',
-    role: 'HR_ADMIN',
-    employeeCode: 'HR002'
-  }
-];
+import { ShieldAlert, LogIn, ArrowRight } from 'lucide-react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('home'); // 'home', 'employee', 'manager', 'kiosk'
   
+  // Danh sách người dùng thực tế lấy từ Database qua API /api/v1/auth/active-users
+  const [usersList, setUsersList] = useState([]);
+
   // Khởi tạo user & token từ localStorage hoặc null nếu chưa đăng nhập
   const [currentUser, setCurrentUser] = useState(() => {
     try {
@@ -65,6 +30,23 @@ export default function App() {
   // Auth Modal State
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState('login'); // 'login' | 'register'
+
+  // Hàm tải danh sách người dùng thực tế từ hệ thống quản lý
+  const refreshUsers = useCallback(async () => {
+    try {
+      const res = await fetch('/api/v1/auth/active-users');
+      const data = await res.json();
+      if (data.success && Array.isArray(data.data) && data.data.length > 0) {
+        setUsersList(data.data);
+      }
+    } catch (err) {
+      console.error("Lỗi đồng bộ danh sách users từ hệ thống:", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshUsers();
+  }, [refreshUsers]);
 
   // Khi currentUser thay đổi, đồng bộ JWT token
   useEffect(() => {
@@ -99,6 +81,8 @@ export default function App() {
   // Xử lý khi đăng nhập hoặc đăng ký thành công từ AuthModal
   const handleAuthSuccess = (authData) => {
     const newUser = {
+      id: authData.employeeId,
+      employeeId: authData.employeeId,
       email: authData.email,
       fullName: authData.fullName,
       role: authData.role,
@@ -109,6 +93,9 @@ export default function App() {
     setToken(authData.token);
     localStorage.setItem('smarttime_user', JSON.stringify(newUser));
     localStorage.setItem('smarttime_token', authData.token);
+
+    // Làm mới danh sách user từ hệ thống
+    refreshUsers();
 
     // Tự động chuyển đến cổng thích hợp
     if (authData.role === 'MANAGER' || authData.role === 'HR_ADMIN') {
@@ -146,7 +133,7 @@ export default function App() {
         setActiveTab={setActiveTab}
         currentUser={currentUser}
         setCurrentUser={setCurrentUser}
-        usersList={USERS}
+        usersList={usersList}
         onOpenAuthModal={handleOpenAuthModal}
         onLogout={handleLogout}
       />
@@ -234,29 +221,30 @@ export default function App() {
                     {currentUser.role}
                   </span>. 
                   <br/>
-                  Cổng này yêu cầu vai trò <strong>MANAGER</strong> hoặc <strong>HR_ADMIN</strong> để phê duyệt đơn từ và khóa bảng lương.
+                  Cổng này yêu cầu vai trò <strong>MANAGER</strong> hoặc <strong>HR_ADMIN</strong> để phê duyệt đơn từ, quản lý nhân sự và khóa bảng lương.
                 </p>
               </div>
 
               <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-left space-y-2">
                 <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                  Chuyển nhanh sang tài khoản Quản lý thử nghiệm:
+                  Chuyển nhanh sang tài khoản Quản lý trong cơ sở dữ liệu:
                 </div>
-                <div className="flex flex-col gap-1.5">
-                  <button
-                    onClick={() => setCurrentUser(USERS.find(u => u.role === 'MANAGER'))}
-                    className="w-full py-2 px-3 rounded-xl bg-white hover:bg-amber-50 border border-slate-200 text-xs font-semibold text-slate-800 flex items-center justify-between transition group"
-                  >
-                    <span>Trần Văn Mạnh (Tech Lead)</span>
-                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800">MANAGER</span>
-                  </button>
-                  <button
-                    onClick={() => setCurrentUser(USERS.find(u => u.role === 'HR_ADMIN'))}
-                    className="w-full py-2 px-3 rounded-xl bg-white hover:bg-purple-50 border border-slate-200 text-xs font-semibold text-slate-800 flex items-center justify-between transition group"
-                  >
-                    <span>Nguyễn Thị Thu (HR Manager)</span>
-                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-800">HR_ADMIN</span>
-                  </button>
+                <div className="flex flex-col gap-1.5 max-h-48 overflow-y-auto">
+                  {usersList.filter(u => u.role === 'MANAGER' || u.role === 'HR_ADMIN').slice(0, 4).map(u => (
+                    <button
+                      key={u.id}
+                      onClick={() => setCurrentUser(u)}
+                      className="w-full py-2 px-3 rounded-xl bg-white hover:bg-indigo-50 border border-slate-200 text-xs font-semibold text-slate-800 flex items-center justify-between transition group"
+                    >
+                      <div className="text-left">
+                        <div>{u.fullName}</div>
+                        <div className="text-[10px] text-slate-400">{u.departmentName}</div>
+                      </div>
+                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${u.role === 'HR_ADMIN' ? 'bg-purple-100 text-purple-800' : 'bg-amber-100 text-amber-800'}`}>
+                        {u.role}
+                      </span>
+                    </button>
+                  ))}
                 </div>
               </div>
 
@@ -272,7 +260,8 @@ export default function App() {
               currentUser={currentUser}
               token={token}
               setCurrentUser={setCurrentUser}
-              usersList={USERS}
+              usersList={usersList}
+              onEmployeeUpdated={refreshUsers}
             />
           )
         )}
@@ -284,7 +273,7 @@ export default function App() {
         onClose={() => setAuthModalOpen(false)}
         onAuthSuccess={handleAuthSuccess}
         initialMode={authModalMode}
-        usersList={USERS}
+        usersList={usersList}
       />
 
       {/* Footer */}
@@ -298,7 +287,7 @@ export default function App() {
             <span>•</span>
             <span>Device Binding 1-1</span>
             <span>•</span>
-            <span>Emergency Selfie GPS</span>
+            <span>Keycloak IAM Synced</span>
             <span>•</span>
             <span>Retroactive Payroll Closing</span>
           </div>

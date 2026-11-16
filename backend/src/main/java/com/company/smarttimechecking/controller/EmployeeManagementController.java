@@ -5,6 +5,7 @@ import com.company.smarttimechecking.domain.entity.EmployeeLeaveBalance;
 import com.company.smarttimechecking.dto.ApiResponse;
 import com.company.smarttimechecking.repository.EmployeeLeaveBalanceRepository;
 import com.company.smarttimechecking.repository.EmployeeRepository;
+import com.company.smarttimechecking.service.KeycloakService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,6 +22,7 @@ public class EmployeeManagementController {
 
     private final EmployeeRepository employeeRepository;
     private final EmployeeLeaveBalanceRepository leaveBalanceRepository;
+    private final KeycloakService keycloakService;
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<Employee>>> listAllEmployees() {
@@ -34,11 +36,17 @@ public class EmployeeManagementController {
             employee.setId(UUID.randomUUID().toString());
         }
         if (employee.getKeycloakUserId() == null || employee.getKeycloakUserId().isBlank()) {
-            employee.setKeycloakUserId("kc-" + employee.getEmployeeCode().toLowerCase());
+            employee.setKeycloakUserId("kc-usr-" + UUID.randomUUID().toString());
         }
         if (employee.getStartDate() == null) {
             employee.setStartDate(LocalDate.now());
         }
+        if (employee.getIsActive() == null) {
+            employee.setIsActive(true);
+        }
+
+        // Tích hợp đồng bộ Keycloak Identity Provider
+        keycloakService.syncUserToKeycloak(employee, null);
 
         Employee saved = employeeRepository.save(employee);
 
@@ -59,7 +67,7 @@ public class EmployeeManagementController {
             leaveBalanceRepository.save(balance);
         }
 
-        return ResponseEntity.ok(ApiResponse.ok("Thêm mới nhân viên thành công", saved));
+        return ResponseEntity.ok(ApiResponse.ok("Thêm mới nhân viên và đồng bộ Keycloak thành công", saved));
     }
 
     @PutMapping("/{id}")
@@ -69,16 +77,22 @@ public class EmployeeManagementController {
         Employee existing = employeeRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy nhân viên với ID: " + id));
 
-        existing.setFullName(payload.getFullName());
-        existing.setEmail(payload.getEmail());
-        existing.setDepartmentId(payload.getDepartmentId());
-        existing.setDirectManagerId(payload.getDirectManagerId());
-        existing.setContractType(payload.getContractType());
-        existing.setAppRole(payload.getAppRole());
-        existing.setIsActive(payload.getIsActive());
+        if (payload.getFullName() != null) existing.setFullName(payload.getFullName().trim());
+        if (payload.getEmail() != null) existing.setEmail(payload.getEmail().trim());
+        if (payload.getEmployeeCode() != null && !payload.getEmployeeCode().isBlank()) {
+            existing.setEmployeeCode(payload.getEmployeeCode().trim());
+        }
+        if (payload.getDepartmentId() != null) existing.setDepartmentId(payload.getDepartmentId());
+        if (payload.getDirectManagerId() != null) existing.setDirectManagerId(payload.getDirectManagerId());
+        if (payload.getContractType() != null) existing.setContractType(payload.getContractType());
+        if (payload.getAppRole() != null) existing.setAppRole(payload.getAppRole());
+        if (payload.getIsActive() != null) existing.setIsActive(payload.getIsActive());
+
+        // Đồng bộ cập nhật vai trò, phòng ban và trạng thái lên Keycloak
+        keycloakService.updateUserInKeycloak(existing);
 
         Employee updated = employeeRepository.save(existing);
-        return ResponseEntity.ok(ApiResponse.ok("Cập nhật thông tin nhân viên thành công", updated));
+        return ResponseEntity.ok(ApiResponse.ok("Cập nhật thông tin nhân viên và đồng bộ Keycloak thành công", updated));
     }
 
     @GetMapping("/{id}")
@@ -89,12 +103,32 @@ public class EmployeeManagementController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<Void>> deleteEmployee(@PathVariable("id") String id) {
+    public ResponseEntity<ApiResponse<Void>> deleteEmployee(
+            @PathVariable("id") String id,
+            @RequestParam(value = "permanent", defaultValue = "false") boolean permanent) {
         Employee existing = employeeRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy nhân viên với ID: " + id));
-        existing.setIsActive(false);
-        employeeRepository.save(existing);
-        return ResponseEntity.ok(ApiResponse.ok("Đã vô hiệu hóa (ngừng hoạt động) nhân viên thành công", null));
+
+        if (permanent) {
+            leaveBalanceRepository.deleteByEmployeeId(id);
+            keycloakService.setUserEnabledStatus(existing.getKeycloakUserId(), false);
+            employeeRepository.delete(existing);
+            return ResponseEntity.ok(ApiResponse.ok("Đã xóa vĩnh viễn nhân viên khỏi hệ thống", null));
+        } else {
+            existing.setIsActive(false);
+            keycloakService.setUserEnabledStatus(existing.getKeycloakUserId(), false);
+            employeeRepository.save(existing);
+            return ResponseEntity.ok(ApiResponse.ok("Đã vô hiệu hóa (ngừng hoạt động) nhân viên thành công", null));
+        }
+    }
+
+    @PostMapping("/{id}/reactivate")
+    public ResponseEntity<ApiResponse<Employee>> reactivateEmployee(@PathVariable("id") String id) {
+        Employee existing = employeeRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy nhân viên với ID: " + id));
+        existing.setIsActive(true);
+        keycloakService.setUserEnabledStatus(existing.getKeycloakUserId(), true);
+        Employee saved = employeeRepository.save(existing);
+        return ResponseEntity.ok(ApiResponse.ok("Đã kích hoạt lại tài khoản nhân viên", saved));
     }
 }
-

@@ -9,5 +9,5 @@ import java.util.Optional;
 @Repository
 public interface EmployeeLeaveBalanceRepository extends JpaRepository<EmployeeLeaveBalance, String> {
     Optional<EmployeeLeaveBalance> findByEmployeeIdAndLeaveYear(String employeeId, Integer leaveYear);
+    void deleteByEmployeeId(String employeeId);
 }
-
